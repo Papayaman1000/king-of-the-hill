@@ -17,6 +17,8 @@
 // your RAM, Shad.
 
 // Any given coordinate can be a tile.
+let arena;
+
 class Tile {
   constructor(x, y) {
     this.x = x;
@@ -64,8 +66,8 @@ class Bot extends Entity {
   constructor(strength, x, y) {
     super(strength, x, y);
     // Adjacent tile list excluding out-of-bounds coordinates.
-    this.canMoveTo = () => {
-      return out.filter(this.adjacent() => tile.isInBounds());
+    this.canMoveTo = tile => {
+      return out.filter(this.adjacent() => tile.isInBounds(arena));
     };
   }
 }
@@ -76,7 +78,7 @@ class Foe extends Bot {
     super(strength, x, y);
     // Checks if another bot (probably mine) can kill this one without dying.
     this.isKillableBy = entity => {
-      return this.strength > entity.strength;
+      return this.strength < entity.strength;
     }
   }
 }
@@ -85,6 +87,8 @@ class Foe extends Bot {
 // This is the main function ran every game cycle to control my bot. It includes
 // pathfinding and decision-making.
 function step (selfData, othersData, coinData) {
+  arena = selfData.arenaLength;
+  
   let moves = ['none', 'north', 'south', 'east', 'west'];
   
   let me = new Bot(selfData.coins, selfData.locationX, selfData.locationY);
@@ -142,7 +146,7 @@ function step (selfData, othersData, coinData) {
   
   // Remove out-of-bounds tiles from consideration.
   for (let i = 0; i < moveOptions.length; i++) {
-    if (!moveOptions[i].isInBounds()) {
+    if (!moveOptions[i].isInBounds(arena)) {
       bestMoves[i] = false;
       moveOptions[i] = false;
     }
@@ -174,8 +178,7 @@ function step (selfData, othersData, coinData) {
   // If every tile around me allows predator collision, prioritize the
   // tiles with predators themselves -- I figure they'll try to pounce on me,
   // which means we'll harmlessly phase through each other if I do the same.
-  // This is essentially a game of reverse chicken
-  // -- if they don't move, I lose.
+  // This is essentially reverse chicken -- if they don't move, I lose.
   if (safeMoveOptions.length === 0) {
     for (let i = 0; i < moveOptions.length; i++) {
       let safe = true;
