@@ -16,9 +16,9 @@
 // general-use functions. Sorry for eating up
 // your RAM, Shad.
 
-// Any given coordinate can be a tile.
 let arena;
 
+// Any given coordinate can be a tile.
 class Tile {
   constructor(x, y) {
     this.x = x;
@@ -27,7 +27,9 @@ class Tile {
     // Finds taxicab distance to other entity
     this.distanceTo = entity => Math.abs(this.x - entity.x) + Math.abs(this.y - entity.y);
     // Finds cartesian distance to other entity via pythagorean theorem
-    this.cartesianDistanceTo = entity => Math.sqrt((Math.abs(this.x - entity.x) ** 2) + (Math.abs(this.y - entity.y) ** 2));
+    // Not technically correct, but serves my purposes of finding which is
+    // greater well enough without an expensive Math.sqrt() operation
+    this.cartesianDistanceTo = entity => Math.pow(this.x - entity.x, 2) + Math.pow(this.y - entity.y, 2);
     // Ranks an array of entities and finds the closest ones
     this.nearest = entityArr => [...entityArr].sort((a, b) => this.distanceTo(a) - this.distanceTo(b));
     // Checks if tile is in the arena
@@ -52,7 +54,7 @@ class Tile {
   }
 }
 
-// Entities include bots and coins. Only coins construct this class directly.
+// Entities include bots and coins. Coins and I construct this class directly.
 class Entity extends Tile {
   constructor(strength, x, y) {
     super(x, y);
@@ -61,25 +63,14 @@ class Entity extends Tile {
   }
 }
 
-// Bots include all players. Only mine constructs from this class directly.
-class Bot extends Entity {
-  constructor(strength, x, y) {
-    super(strength, x, y);
-    // Adjacent tile list excluding out-of-bounds coordinates.
-    this.canMoveTo = tile => {
-      return out.filter(this.adjacent() => tile.isInBounds(arena));
-    };
-  }
-}
-
 // Foes are all the bots that aren't mine. Eat or be eaten.
-class Foe extends Bot {
+class Foe extends Entity {
   constructor(strength, x, y) {
     super(strength, x, y);
     // Checks if another bot (probably mine) can kill this one without dying.
     this.isKillableBy = entity => {
       return this.strength < entity.strength;
-    }
+    };
   }
 }
 
@@ -87,15 +78,15 @@ class Foe extends Bot {
 // This is the main function ran every game cycle to control my bot. It includes
 // pathfinding and decision-making.
 function step (selfData, othersData, coinData) {
-  arena = selfData.arenaLength;
+  let arena = selfData.arenaLength;
   
   let moves = ['none', 'north', 'south', 'east', 'west'];
   
-  let me = new Bot(selfData.coins, selfData.locationX, selfData.locationY);
+  let me = new Entity(selfData.coins, selfData.locationX, selfData.locationY);
   
   let enemies = [];
   for (let index of othersData) {
-    enemies.push(new Foe(...index))
+    enemies.push(new Foe(...index));
   }
   
   let bots = [me, ...enemies];
@@ -106,7 +97,7 @@ function step (selfData, othersData, coinData) {
     isGold = false;
   }
   
-  /* variables: 
+  /* variables:
    * - bots -- array of all bot entities
    * - enemies -- array of all bot entities excluding me
    * - coins -- array of all coins
@@ -135,8 +126,8 @@ function step (selfData, othersData, coinData) {
     
     let out = ai - bi;
     
-    if (out = 0) out = b.strength - a.strength;
-    if (out = 0) out = a.distanceTo(me) - b.distanceTo(me);
+    if (out === 0) out = b.strength - a.strength;
+    if (out === 0) out = a.distanceTo(me) - b.distanceTo(me);
   });
   
   // moveOptions is an array of all the tiles I can move to.
@@ -158,7 +149,7 @@ function step (selfData, othersData, coinData) {
   // collided with this step. Prey are sorted big-endian by value.
   let predators = enemies.filter(foe => ((!foe.isKillableBy(me)) && foe.distanceTo(me) < 3));
   let prey = enemies.filter(foe => (foe.isKillableBy(me) && foe.distanceTo(me) < 3));
-  prey.sort((a, b) => return b.value - a.value);
+  prey.sort((a, b) => b.value - a.value);
   
   // Avoid tiles that allow collision with predators this step.
   let safeMoveOptions = [];
