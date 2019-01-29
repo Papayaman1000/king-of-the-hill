@@ -1,5 +1,5 @@
 /*
- * Papayadyne Industries P-800 Infiltration Unit
+ * Papayadyne Industries P-1000 Infiltration Unit
  * Created for the r/MadeInAbyss Discord's King of the Hill competition.
  * Prioritizes coins it's likely to get to first, dodging hazards and pouncing
  * on inferior bots in the process.
@@ -9,14 +9,13 @@
  *   prioritizing those with foes closer to grabbing it. This serves the dual
  *   purpose of both having a higher chance of collecting both coins before a
  *   foe, as well as slaying and harvesting weaker foes aiming for the same.
+ * * Diagonal movement still isn't too "smart".
  */
 
 // Object wrappers for the major entity types
 // Ensures syntactic consistency for more
 // general-use functions. Sorry for eating up
 // your RAM, Shad.
-
-let arena;
 
 // Any given coordinate can be a tile.
 class Tile {
@@ -33,7 +32,7 @@ class Tile {
     // Ranks an array of entities and finds the closest ones
     this.nearest = entityArr => [...entityArr].sort((a, b) => this.distanceTo(a) - this.distanceTo(b));
     // Checks if tile is in the arena
-    this.isInBounds = arenaLength => (0 <= this.x && this.x <= arenaLength && 0 <= this.y && this.y <= arenaLength);
+    this.isInBounds = arenaLength => (0 <= this.x && this.x < arenaLength && 0 <= this.y && this.y < arenaLength);
     // Returns an array of all the tiles within a step of this one.
     this.adjacent = () => {
       let out = [];
@@ -149,7 +148,7 @@ function step (selfData, othersData, coinData) {
   // collided with this step. Prey are sorted big-endian by value.
   let predators = enemies.filter(foe => ((!foe.isKillableBy(me)) && foe.distanceTo(me) < 3));
   let prey = enemies.filter(foe => (foe.isKillableBy(me) && foe.distanceTo(me) < 3));
-  prey.sort((a, b) => b.value - a.value);
+  prey.sort((a, b) => b.strength - a.strength);
   
   // Avoid tiles that allow collision with predators this step.
   let safeMoveOptions = [];
@@ -157,7 +156,7 @@ function step (selfData, othersData, coinData) {
   for (let i = 0; i < moveOptions.length; i++) {
     let safe = true;
     for (let foe of predators) {
-      safe = (tile.isAdjacentTo(foe) || tile.matches(foe)) ? false : safe;
+      safe = (moveOptions[i].isAdjacentTo(foe) || moveOptions[i].matches(foe)) ? false : safe;
     }
     safeMoveOptions.push((safe) ? moveOptions[i] : false);
     safeBestMoves.push((safe) ? bestMoves[i] : false);
@@ -174,7 +173,7 @@ function step (selfData, othersData, coinData) {
     for (let i = 0; i < moveOptions.length; i++) {
       let safe = true;
       for (let foe of predators) {
-        safe = (tile.isAdjacentTo(foe)) ? false : safe;
+        safe = (moveOptions[i].isAdjacentTo(foe)) ? false : safe;
       }
       safeMoveOptions.push((safe) ? moveOptions[i] : false);
       safeBestMoves.push((safe) ? bestMoves[i] : false);
@@ -219,5 +218,5 @@ function step (selfData, othersData, coinData) {
   }
   
   // And finally, head for the target coin.
-  return safeBestMoves[i];
+  return safeBestMoves[idealIndex];
 }
